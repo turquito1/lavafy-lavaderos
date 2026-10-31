@@ -5,6 +5,7 @@ import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   bookings,
+  businessPhotos,
   businesses,
   openingHours,
   scheduleExceptions,
@@ -78,6 +79,14 @@ export async function getUpcomingExceptions(business: Pick<Business, "id" | "tim
     .orderBy(asc(scheduleExceptions.date), asc(scheduleExceptions.startMinute));
 }
 
+export async function getBusinessPhotos(businessId: string) {
+  return db
+    .select({ id: businessPhotos.id, url: businessPhotos.url, width: businessPhotos.width, height: businessPhotos.height })
+    .from(businessPhotos)
+    .where(eq(businessPhotos.businessId, businessId))
+    .orderBy(asc(businessPhotos.sortOrder), asc(businessPhotos.createdAt));
+}
+
 export async function getUserVehicles(userId: string) {
   return db.select().from(vehicles).where(eq(vehicles.userId, userId)).orderBy(desc(vehicles.lastUsedAt)).limit(10);
 }
@@ -85,6 +94,8 @@ export async function getUserVehicles(userId: string) {
 export type DirectoryItem = Pick<Business, "id" | "slug" | "name" | "description" | "address" | "city" | "logoUrl" | "coverUrl" | "lat" | "lng"> & {
   distanceKm: number | null;
   minPrice: number | null;
+  /** Primera foto de la galería (se usa si no hay portada). */
+  photoUrl: string | null;
 };
 
 /** Directorio público: lavaderos activos, ordenados por distancia si hay ubicación. */
@@ -114,6 +125,7 @@ export async function searchDirectory(params: { q?: string; lat?: number; lng?: 
       lng: businesses.lng,
       distanceKm: distance,
       minPrice,
+      photoUrl: sql<string | null>`(select bp.url from business_photos bp where bp.business_id = "businesses"."id" order by bp.sort_order, bp.created_at limit 1)`,
     })
     .from(businesses)
     .where(

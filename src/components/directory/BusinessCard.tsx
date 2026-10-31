@@ -7,9 +7,9 @@ export function BusinessCard({ b }: { b: DirectoryItem }) {
   return (
     <Link href={`/${b.slug}`} className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-card">
       <div className="relative h-28 bg-gradient-to-br from-primary via-blue-500 to-accent">
-        {b.coverUrl && (
+        {(b.coverUrl ?? b.photoUrl) && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={b.coverUrl} alt="" className="size-full object-cover" loading="lazy" />
+          <img src={(b.coverUrl ?? b.photoUrl)!} alt="" className="size-full object-cover" loading="lazy" />
         )}
         {b.distanceKm !== null && (
           <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-soft">

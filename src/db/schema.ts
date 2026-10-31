@@ -180,6 +180,23 @@ export const businessMembers = pgTable(
   (t) => [primaryKey({ columns: [t.businessId, t.userId] }), index("business_members_user_idx").on(t.userId)],
 );
 
+/** Galería de fotos del lavadero (se muestra en su página pública). */
+export const businessPhotos = pgTable(
+  "business_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id")
+      .notNull()
+      .references(() => businesses.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    width: smallint("width"),
+    height: smallint("height"),
+    sortOrder: smallint("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("business_photos_business_idx").on(t.businessId, t.sortOrder)],
+);
+
 // ─── Horarios ─────────────────────────────────────────────────────────────────
 
 /** Horario semanal. Puede haber varios tramos por día (ej. 9–13 y 15–20). */
@@ -364,6 +381,7 @@ export const bookingEvents = pgTable(
 
 export type User = typeof users.$inferSelect;
 export type Business = typeof businesses.$inferSelect;
+export type BusinessPhoto = typeof businessPhotos.$inferSelect;
 export type Service = typeof services.$inferSelect;
 export type ServicePrice = typeof servicePrices.$inferSelect;
 export type OpeningHour = typeof openingHours.$inferSelect;

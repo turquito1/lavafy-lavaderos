@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Postgres local
 .data/
+
+# Fotos subidas en desarrollo (en producción van a Vercel Blob)
+/public/uploads/

@@ -14,6 +14,7 @@ import { db } from "@/db";
 import {
   bookings,
   businessMembers,
+  businessPhotos,
   businesses,
   openingHours,
   scheduleExceptions,
@@ -29,11 +30,12 @@ import {
   notifyBookingReady,
   notifyBookingRescheduled,
 } from "@/server/notifications";
-import { RESERVED_SLUGS } from "@/lib/constants";
+import { MAX_PHOTOS, RESERVED_SLUGS } from "@/lib/constants";
 import { isDateStr } from "@/lib/time";
 import { slugify } from "@/lib/format";
 import { firstError, manualBookingSchema, vehicleTypeSchema, type ManualBookingPayload } from "@/lib/validation";
 import { fail, handleError, ok, type ActionResult } from "./result";
+import { deleteImage, saveImage, StorageError } from "@/server/storage";
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 
@@ -209,31 +211,84 @@ export async function uploadImageAction(formData: FormData): Promise<ActionResul
   const kind = formData.get("kind");
   const file = formData.get("file");
   if (kind !== "logo" && kind !== "cover") return fail("Tipo inválido");
-  if (!(file instanceof File) || file.size === 0) return fail("Elegí una imagen");
-  if (!file.type.startsWith("image/")) return fail("El archivo tiene que ser una imagen");
-  if (file.size > 4 * 1024 * 1024) return fail("La imagen tiene que pesar menos de 4 MB");
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return fail("La subida de imágenes no está configurada (falta BLOB_READ_WRITE_TOKEN).");
   try {
-    const { put } = await import("@vercel/blob");
-    const ext = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
-    const blob = await put(`businesses/${business.id}/${kind}.${ext}`, file, { access: "public", addRandomSuffix: true, contentType: file.type });
+    const url = await saveImage(`businesses/${business.id}/${kind}`, file as File);
     await db
       .update(businesses)
-      .set(kind === "logo" ? { logoUrl: blob.url } : { coverUrl: blob.url })
+      .set(kind === "logo" ? { logoUrl: url } : { coverUrl: url })
       .where(eq(businesses.id, business.id));
+    after(() => deleteImage(kind === "logo" ? business.logoUrl : business.coverUrl));
     refresh();
-    return ok({ url: blob.url });
+    return ok({ url });
   } catch (err) {
+    if (err instanceof StorageError) return fail(err.message);
     return handleError(err);
   }
 }
 
 export async function removeImageAction(kind: "logo" | "cover"): Promise<ActionResult> {
   const { business } = await requireBusiness();
+  if (kind !== "logo" && kind !== "cover") return fail("Tipo inválido");
   await db
     .update(businesses)
     .set(kind === "logo" ? { logoUrl: null } : { coverUrl: null })
     .where(eq(businesses.id, business.id));
+  after(() => deleteImage(kind === "logo" ? business.logoUrl : business.coverUrl));
+  refresh();
+  return ok(undefined);
+}
+
+// ─── Galería de fotos ─────────────────────────────────────────────────────────
+
+export async function uploadPhotoAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
+  const { business } = await requireBusiness();
+  const width = Number(formData.get("width")) || null;
+  const height = Number(formData.get("height")) || null;
+  try {
+    const [{ count, max }] = await db
+      .select({ count: sql<number>`count(*)::int`, max: sql<number>`coalesce(max(${businessPhotos.sortOrder}), -1)::int` })
+      .from(businessPhotos)
+      .where(eq(businessPhotos.businessId, business.id));
+    if (count >= MAX_PHOTOS) return fail(`Podés tener hasta ${MAX_PHOTOS} fotos. Borrá alguna para subir otra.`);
+    const url = await saveImage(`businesses/${business.id}/fotos/foto`, formData.get("file") as File);
+    const [row] = await db
+      .insert(businessPhotos)
+      .values({ businessId: business.id, url, width, height, sortOrder: max + 1 })
+      .returning({ id: businessPhotos.id });
+    refresh();
+    return ok({ id: row.id });
+  } catch (err) {
+    if (err instanceof StorageError) return fail(err.message);
+    return handleError(err);
+  }
+}
+
+export async function deletePhotoAction(id: string): Promise<ActionResult> {
+  const { business } = await requireBusiness();
+  if (!z.uuid().safeParse(id).success) return fail("Foto inválida");
+  const [row] = await db
+    .delete(businessPhotos)
+    .where(and(eq(businessPhotos.id, id), eq(businessPhotos.businessId, business.id)))
+    .returning({ url: businessPhotos.url });
+  if (row) after(() => deleteImage(row.url));
+  refresh();
+  return ok(undefined);
+}
+
+export async function movePhotoAction(id: string, direction: -1 | 1): Promise<ActionResult> {
+  const { business } = await requireBusiness();
+  const list = await db
+    .select({ id: businessPhotos.id })
+    .from(businessPhotos)
+    .where(eq(businessPhotos.businessId, business.id))
+    .orderBy(businessPhotos.sortOrder, businessPhotos.createdAt);
+  const i = list.findIndex((p) => p.id === id);
+  const j = i + direction;
+  if (i < 0 || j < 0 || j >= list.length) return ok(undefined);
+  [list[i], list[j]] = [list[j], list[i]];
+  await db.transaction(async (tx) => {
+    for (const [index, p] of list.entries()) await tx.update(businessPhotos).set({ sortOrder: index }).where(eq(businessPhotos.id, p.id));
+  });
   refresh();
   return ok(undefined);
 }

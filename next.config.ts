@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
     },
   },
+  experimental: {
+    // Las fotos llegan comprimidas desde el navegador (~200–400 KB); dejamos margen.
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   images: { remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }] },
   async rewrites() {
     return {

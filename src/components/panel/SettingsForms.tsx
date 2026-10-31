@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Check, Copy, ExternalLink, ImagePlus, LocateFixed, Minus, Plus, QrCode, Share2, Smartphone, Trash2 } from "lucide-react";
+import { Check, Copy, ExternalLink, LocateFixed, Minus, Plus, QrCode, Share2, Smartphone } from "lucide-react";
 import type { Business } from "@/db/schema";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -11,12 +11,10 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Switch } from "@/components/ui/Switch";
 import { Spinner } from "@/components/ui/Spinner";
 import {
-  removeImageAction,
   setPublishedAction,
   updateLocationAction,
   updateProfileAction,
   updateRulesAction,
-  uploadImageAction,
 } from "@/server/actions/panel";
 import { cn, mapsLink, slugify } from "@/lib/format";
 import { SLOT_INTERVAL_OPTIONS } from "@/lib/constants";
@@ -162,62 +160,6 @@ export function ProfileForm({ business, host }: { business: B; host: string }) {
       </div>
       <SaveBar pending={pending} onClick={() => run(() => updateProfileAction(f))} />
     </Card>
-  );
-}
-
-export function ImagesForm({ business, uploadsEnabled }: { business: B; uploadsEnabled: boolean }) {
-  return (
-    <Card>
-      <CardHeader title="Imágenes" description="Logo y foto de portada de tu página." />
-      <div className="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-[160px_1fr]">
-        <ImageSlot kind="logo" label="Logo" url={business.logoUrl} enabled={uploadsEnabled} className="aspect-square" />
-        <ImageSlot kind="cover" label="Portada" url={business.coverUrl} enabled={uploadsEnabled} className="aspect-[3/1] sm:aspect-auto sm:h-40" />
-      </div>
-      {!uploadsEnabled && <p className="px-5 pb-4 text-xs text-muted">Para subir imágenes, conectá Vercel Blob (variable BLOB_READ_WRITE_TOKEN).</p>}
-    </Card>
-  );
-}
-
-function ImageSlot({ kind, label, url, enabled, className }: { kind: "logo" | "cover"; label: string; url: string | null; enabled: boolean; className?: string }) {
-  const input = useRef<HTMLInputElement>(null);
-  const [pending, start] = useTransition();
-  const upload = (file: File) =>
-    start(async () => {
-      const fd = new FormData();
-      fd.set("kind", kind);
-      fd.set("file", file);
-      const res = await uploadImageAction(fd);
-      if (res.ok) toast.success(`${label} actualizado`);
-      else toast.error(res.error);
-    });
-  return (
-    <div>
-      <p className="mb-1.5 text-sm font-medium text-ink-soft">{label}</p>
-      <div className={cn("group relative overflow-hidden rounded-xl border-2 border-dashed border-line bg-slate-50", className)}>
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={label} className="size-full object-cover" />
-        ) : (
-          <button type="button" disabled={!enabled || pending} onClick={() => input.current?.click()} className="flex size-full min-h-24 flex-col items-center justify-center gap-1 text-sm text-muted disabled:cursor-not-allowed">
-            <ImagePlus className="size-6" /> Subir
-          </button>
-        )}
-        {pending && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70">
-            <Spinner />
-          </div>
-        )}
-        {url && enabled && !pending && (
-          <div className="absolute right-2 bottom-2 flex gap-1">
-            <Button size="sm" variant="secondary" onClick={() => input.current?.click()}>
-              Cambiar
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => start(async () => void (await removeImageAction(kind)))} aria-label="Quitar" icon={<Trash2 className="size-4" />} />
-          </div>
-        )}
-      </div>
-      <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-    </div>
   );
 }
 

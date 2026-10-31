@@ -31,6 +31,9 @@ export const STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   no_show: ["confirmed"],
 };
 
+/** Fotos en la galería de cada lavadero. */
+export const MAX_PHOTOS = 12;
+
 export const SLOT_INTERVAL_OPTIONS = [10, 15, 20, 30, 45, 60] as const;
 
 /** Slugs que no puede usar un lavadero porque chocan con rutas de la app. */

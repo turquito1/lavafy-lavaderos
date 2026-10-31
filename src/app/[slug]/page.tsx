@@ -9,7 +9,8 @@ import { OpenNow } from "@/components/booking/OpenNow";
 import { HoursTable } from "@/components/booking/HoursTable";
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Spinner";
-import { getBusinessBySlug, getCatalog, getUpcomingExceptions, getUserVehicles, getWeeklyHours } from "@/server/queries";
+import { getBusinessBySlug, getBusinessPhotos, getCatalog, getUpcomingExceptions, getUserVehicles, getWeeklyHours } from "@/server/queries";
+import { PhotoGallery } from "@/components/booking/PhotoGallery";
 import { getMyBusinesses, getSessionUser } from "@/server/session";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -24,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/[slug]">): Promis
   return {
     title: `${business.name} · Sacá turno`,
     description: business.description ?? `Reservá tu turno online en ${business.name}${business.city ? `, ${business.city}` : ""}.`,
-    openGraph: { title: `${business.name} · Sacá turno online`, images: business.coverUrl ? [business.coverUrl] : undefined },
+    openGraph: { title: `${business.name} · Sacá turno online`, images: business.coverUrl ? [business.coverUrl] : business.logoUrl ? [business.logoUrl] : undefined },
   };
 }
 
@@ -49,13 +50,16 @@ async function BusinessContent({ params }: { params: PageProps<"/[slug]">["param
   const isMember = user ? (await getMyBusinesses(user.id)).some((m) => m.business.id === business.id) : false;
   if (business.status !== "active" && !isMember) notFound();
 
-  const [catalog, weekly, exceptions, profile, savedVehicles] = await Promise.all([
+  const [catalog, weekly, exceptions, profile, savedVehicles, photos] = await Promise.all([
     getCatalog(business.id, { onlyActive: true }),
     getWeeklyHours(business.id),
     getUpcomingExceptions(business),
     user ? db.select({ phone: users.phone, name: users.name }).from(users).where(eq(users.id, user.id)).then((r) => r[0]) : null,
     user ? getUserVehicles(user.id) : [],
+    getBusinessPhotos(business.id),
   ]);
+  // Si no subió portada, usamos la primera foto de la galería.
+  const coverUrl = business.coverUrl ?? photos[0]?.url ?? null;
   const services = catalog.filter((s) => s.prices.length > 0);
   const map = mapsLink(business);
   const location = [business.address, business.city].filter(Boolean).join(", ");
@@ -71,9 +75,9 @@ async function BusinessContent({ params }: { params: PageProps<"/[slug]">["param
       {/* Portada */}
       <section className="relative">
         <div className="h-36 overflow-hidden bg-gradient-to-br from-primary via-blue-500 to-accent sm:h-48">
-          {business.coverUrl && (
+          {coverUrl && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={business.coverUrl} alt="" className="size-full object-cover" />
+            <img src={coverUrl} alt="" className="size-full object-cover" />
           )}
         </div>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
@@ -110,6 +114,11 @@ async function BusinessContent({ params }: { params: PageProps<"/[slug]">["param
               {business.instagram && <ContactButton href={`https://instagram.com/${business.instagram.replace(/^@/, "")}`} icon={<AtSign className="size-4" />} label="Instagram" />}
             </div>
           </div>
+          {photos.length > 0 && (
+            <div className="mt-5">
+              <PhotoGallery photos={photos.map((p) => ({ id: p.id, url: p.url }))} name={business.name} />
+            </div>
+          )}
         </div>
       </section>
 

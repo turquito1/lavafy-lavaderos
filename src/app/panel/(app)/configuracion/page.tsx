@@ -4,7 +4,10 @@ import { Suspense } from "react";
 import { LogOut, Plus } from "lucide-react";
 import { Card, CardHeader, PageHeader } from "@/components/ui/Card";
 import { PageSkeleton } from "@/components/ui/Spinner";
-import { ImagesForm, LocationForm, ProfileForm, PublishCard, RulesForm } from "@/components/panel/SettingsForms";
+import { LocationForm, ProfileForm, PublishCard, RulesForm } from "@/components/panel/SettingsForms";
+import { ImagesManager } from "@/components/panel/ImagesManager";
+import { getBusinessPhotos } from "@/server/queries";
+import { storageMode } from "@/server/storage";
 import { SetupChecklist } from "@/components/panel/SetupChecklist";
 import { getMyBusinesses, requireBusiness } from "@/server/session";
 import { signOutAction } from "@/server/actions/auth";
@@ -22,7 +25,7 @@ export default function SettingsPage() {
 
 async function Content() {
   const { user, business } = await requireBusiness();
-  const mine = await getMyBusinesses(user.id);
+  const [mine, photos] = await Promise.all([getMyBusinesses(user.id), getBusinessPhotos(business.id)]);
   const appUrl = (process.env.APP_URL ?? "https://lavafy.com.ar").replace(/\/$/, "");
   const host = appUrl.replace(/^https?:\/\//, "");
   return (
@@ -32,7 +35,7 @@ async function Content() {
       <PublishCard business={business} appUrl={appUrl} />
       <RulesForm business={business} />
       <ProfileForm business={business} host={host} />
-      <ImagesForm business={business} uploadsEnabled={!!process.env.BLOB_READ_WRITE_TOKEN} />
+      <ImagesManager logoUrl={business.logoUrl} coverUrl={business.coverUrl} photos={photos} uploadsEnabled={storageMode() !== "none"} />
       <LocationForm business={business} />
 
       <Card>

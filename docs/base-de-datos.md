@@ -9,6 +9,7 @@ erDiagram
   users ||--o{ accounts : "login Google"
   users ||--o{ business_members : ""
   businesses ||--o{ business_members : "dueños / staff"
+  businesses ||--o{ business_photos : "galería"
   businesses ||--o{ opening_hours : "horario semanal"
   businesses ||--o{ schedule_exceptions : "feriados"
   businesses ||--o{ services : ""
@@ -27,6 +28,7 @@ erDiagram
 | `accounts`, `sessions`, `verification_tokens` | Las pide Auth.js. Las sesiones van en JWT, así que `sessions` queda vacía. |
 | `businesses` | El lavadero (tenant). Datos públicos, ubicación y **reglas de agenda**: `capacity`, `slot_interval_minutes`, `min_lead_minutes`, `max_days_ahead`, `cancel_window_minutes`, `requires_approval`. Estado `draft → active → suspended`. |
 | `business_members` | Quién administra cada lavadero (`owner` / `staff`). Reemplaza el `tenantId` en el usuario del sistema viejo: un usuario puede tener varios lavaderos. |
+| `business_photos` | Galería del lavadero (hasta 12 fotos), con orden. Los archivos van a Vercel Blob (en desarrollo, a `public/uploads`). El logo y la portada están en `businesses.logo_url` / `cover_url`. |
 | `opening_hours` | Horario semanal. Varias filas por día = varios tramos (9–13 y 15–20). |
 | `schedule_exceptions` | Una fecha puntual. Si hay al menos una fila para esa fecha, **reemplaza** el horario semanal: con `start/end = null` está cerrado; con horario, abre solo en esos tramos. |
 | `services` | Lo que ofrece el lavadero, con orden y visibilidad. |
