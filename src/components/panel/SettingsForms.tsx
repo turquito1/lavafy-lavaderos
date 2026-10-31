@@ -2,7 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, Copy, ExternalLink, ImagePlus, LocateFixed, Minus, Plus, Share2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Check, Copy, ExternalLink, ImagePlus, LocateFixed, Minus, Plus, QrCode, Share2, Smartphone, Trash2 } from "lucide-react";
 import type { Business } from "@/db/schema";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -75,6 +76,22 @@ export function PublishCard({ business, appUrl }: { business: B; appUrl: string 
           <a href={`/${business.slug}`} target="_blank" className="hidden rounded-lg p-2 text-muted hover:bg-white hover:text-primary sm:block" aria-label="Abrir">
             <ExternalLink className="size-4" />
           </a>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Link href="/panel/cartel" className="flex items-center gap-3 rounded-xl border border-line p-3 transition-colors hover:border-primary-border hover:bg-primary-light/50">
+            <QrCode className="size-8 shrink-0 text-primary" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-ink">Cartel con QR</span>
+              <span className="block text-xs text-muted">Para imprimir y poner en el mostrador</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-3 rounded-xl border border-line p-3">
+            <Smartphone className="size-8 shrink-0 text-primary" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-ink">Instalá Lavafy en tu celu</span>
+              <span className="block text-xs text-muted">En el navegador: menú → “Agregar a pantalla de inicio”</span>
+            </span>
+          </div>
         </div>
         <div className={cn("flex items-center justify-between gap-4 rounded-xl p-4", published ? "bg-emerald-50" : "bg-amber-50")}>
           <div>

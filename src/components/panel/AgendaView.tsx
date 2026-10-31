@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, EmptyState } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
 import { BookingList, NewBookingSheet, type PanelBusiness } from "./BookingUI";
+import { AlertsCard } from "./AlertsCard";
 
 type Props = {
   business: PanelBusiness;
@@ -51,7 +52,12 @@ export function AgendaView({ business, date, today, bookings, services, open, pe
           </button>
           <label className="relative cursor-pointer">
             <div className="min-w-44 rounded-xl px-2 text-center">
-              <p className="text-xs font-semibold text-primary">{isToday ? "HOY" : date === addDaysStr(today, 1) ? "MAÑANA" : parts.weekdayShort.toUpperCase()}</p>
+              <p className="flex items-center justify-center gap-1.5 text-xs font-semibold text-primary">
+                {isToday ? "HOY" : date === addDaysStr(today, 1) ? "MAÑANA" : parts.weekdayShort.toUpperCase()}
+                <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-700" title="La agenda se actualiza sola">
+                  <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" /> EN VIVO
+                </span>
+              </p>
               <p className="flex items-center justify-center gap-1.5 font-display text-xl font-bold text-ink">
                 {parts.long.replace(/^\S+\s/, "")}
                 {navigating ? <Spinner className="size-4 text-muted" /> : <CalendarDays className="size-4 text-muted" />}
@@ -77,6 +83,8 @@ export function AgendaView({ business, date, today, bookings, services, open, pe
           </Button>
         </div>
       </div>
+
+      <AlertsCard />
 
       {pendingOtherDays > 0 && (
         <Link href="/panel/turnos?tab=pendientes" className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100">

@@ -10,12 +10,14 @@ import { BottomNav, SidebarNav } from "@/components/panel/PanelNav";
 import { BusinessSwitcher } from "@/components/panel/BusinessSwitcher";
 import { getMyBusinesses, requireBusiness } from "@/server/session";
 import { signOutAction } from "@/server/actions/auth";
+import { LivePanel } from "@/components/panel/LivePanel";
 
 export default function PanelLayout({ children }: LayoutProps<"/panel">) {
   return (
-    <div className="flex min-h-dvh bg-bg">
+    <div className="flex min-h-dvh bg-bg print:block print:bg-white">
+      <LivePanel />
       {/* Sidebar desktop */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-white md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-64 print:hidden shrink-0 flex-col border-r border-line bg-white md:flex">
         <div className="border-b border-line p-5">
           <Link href="/" className="mb-5 inline-block">
             <Logo size={30} textClassName="text-lg" />
@@ -35,7 +37,7 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
       </aside>
 
       {/* Barra superior mobile */}
-      <div className="fixed inset-x-0 top-0 z-40 flex h-[52px] items-center justify-between border-b border-line bg-white px-4 shadow-soft md:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-[52px] items-center justify-between border-b border-line bg-white px-4 shadow-soft md:hidden print:hidden">
         <Link href="/">
           <Logo size={26} textClassName="text-base" />
         </Link>
@@ -44,7 +46,7 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
         </Suspense>
       </div>
 
-      <main className="min-w-0 flex-1 pt-[52px] pb-[calc(64px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">{children}</main>
+      <main className="min-w-0 flex-1 pt-[52px] pb-[calc(64px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 print:p-0">{children}</main>
 
       <Suspense fallback={<BottomNav />}>
         <BottomNavWithCount />

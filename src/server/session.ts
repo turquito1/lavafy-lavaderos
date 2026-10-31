@@ -36,14 +36,21 @@ export const getMyBusinesses = cache(async (userId: string) => {
     .orderBy(asc(businesses.createdAt));
 });
 
-/** Lavadero activo del panel (el elegido en la cookie, o el primero). Redirige si no tiene ninguno. */
-export const requireBusiness = cache(async (): Promise<{ user: SessionUser; business: Business; role: "owner" | "staff" }> => {
-  const user = await requireUser("/panel");
-  const mine = await getMyBusinesses(user.id);
-  if (mine.length === 0) redirect("/panel/nuevo");
+/** Lavadero activo del usuario (el elegido en la cookie, o el primero). null si no tiene ninguno. */
+export async function getCurrentBusiness(userId: string): Promise<{ business: Business; role: "owner" | "staff" } | null> {
+  const mine = await getMyBusinesses(userId);
+  if (mine.length === 0) return null;
   const selected = (await cookies()).get(BUSINESS_COOKIE)?.value;
   const current = mine.find((m) => m.business.id === selected) ?? mine[0];
-  return { user, business: current.business, role: current.role };
+  return { business: current.business, role: current.role };
+}
+
+/** Lavadero activo del panel. Redirige al login o al alta si hace falta. */
+export const requireBusiness = cache(async (): Promise<{ user: SessionUser; business: Business; role: "owner" | "staff" }> => {
+  const user = await requireUser("/panel");
+  const current = await getCurrentBusiness(user.id);
+  if (!current) redirect("/panel/nuevo");
+  return { user, ...current };
 });
 
 /** Para server actions: verifica que el usuario sea miembro del lavadero. */

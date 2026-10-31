@@ -43,7 +43,7 @@ export function SidebarNav({ pendingCount }: { pendingCount?: number }) {
 export function BottomNav({ pendingCount }: { pendingCount?: number }) {
   const pathname = usePathname();
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-white md:hidden">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-white md:hidden print:hidden">
       {PANEL_NAV.map((item) => {
         const active = pathname.startsWith(item.href);
         return (
