@@ -432,7 +432,11 @@ export function BookingFlow({ business, services, weekly, exceptions, user, save
                 Confirmar con Google
               </button>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted">
-                <ShieldCheck className="size-3.5" /> Validamos el turno con tu cuenta de Google. No publicamos nada.
+                <ShieldCheck className="size-3.5 shrink-0" />
+                <span>
+                  Validamos el turno con tu cuenta de Google. Ver{" "}
+                  <a href="/privacidad" target="_blank" className="underline">privacidad</a>.
+                </span>
               </p>
             </form>
           ))}

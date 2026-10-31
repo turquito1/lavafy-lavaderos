@@ -107,7 +107,11 @@ export function NewBusinessForm({ host }: { host: string }) {
       <Button type="submit" size="lg" className="w-full" loading={pending} disabled={slugStatus.available === false}>
         Crear mi lavadero
       </Button>
-      <p className="text-center text-xs text-muted">30 días gratis. Después elegís un plan. Sin tarjeta.</p>
+      <p className="text-center text-xs text-muted">
+        30 días gratis. Sin tarjeta. Al crear tu lavadero aceptás los{" "}
+        <a href="/terminos" target="_blank" className="underline hover:text-primary">términos</a> y la{" "}
+        <a href="/privacidad" target="_blank" className="underline hover:text-primary">política de privacidad</a>.
+      </p>
     </form>
   );
 }

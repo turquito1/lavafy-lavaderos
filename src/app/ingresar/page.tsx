@@ -28,7 +28,9 @@ export default function LoginPage({ searchParams }: PageProps<"/ingresar">) {
           </Suspense>
         </div>
         <p className="mt-6 text-center text-xs text-muted">
-          Al continuar aceptás los términos de uso de Lavafy.
+          Al continuar aceptás los{" "}
+          <Link href="/terminos" className="underline hover:text-primary">términos</Link> y la{" "}
+          <Link href="/privacidad" className="underline hover:text-primary">política de privacidad</Link> de Lavafy.
         </p>
       </div>
     </main>
