@@ -27,18 +27,27 @@ export function Sheet({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // onClose suele ser una función nueva en cada render (ej. () => setForm(null)). La guardamos en un ref
+  // para que el efecto de abajo corra solo al abrir/cerrar y no en cada tecla que se escribe.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current();
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panelRef.current?.focus();
+    // Foco en la ventana al abrir, salvo que un campo ya lo haya tomado (autoFocus).
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) panel.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
