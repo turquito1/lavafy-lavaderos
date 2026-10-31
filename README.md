@@ -76,10 +76,7 @@ scripts/                     db-local, migrate, seed
 
 ### Landing del detailing en `/landing`
 
-La landing actual (otro proyecto de Vercel) pasa a vivir en `lavafy.com.ar/landing`:
-
-1. En el proyecto de la landing poné `base: "/landing/"` (Vite) o `basePath: "/landing"` (Next) y redeployalo con su URL de Vercel.
-2. En este proyecto definí `LANDING_URL=https://<landing>.vercel.app`. El rewrite ya está en `next.config.ts`.
+La landing del Detallado Lavafy (detailing a domicilio) vive dentro de este proyecto, en `public/landing/` (HTML estático + fotos), y se sirve en `lavafy.com.ar/landing`. Para cambiarla editá `public/landing/index.html`. Las imágenes van en `public/landing/assets/` y se referencian con ruta absoluta (`/landing/assets/...`).
 
 ## Roadmap sugerido
 

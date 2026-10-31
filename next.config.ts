@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const landingUrl = process.env.LANDING_URL?.replace(/\/$/, "");
-
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
@@ -12,17 +10,23 @@ const nextConfig: NextConfig = {
     },
   },
   images: { remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }] },
-  // lavafy.com.ar/landing → landing del detailing (otro proyecto de Vercel, con basePath "/landing").
   async rewrites() {
-    return landingUrl
-      ? [
-          { source: "/landing", destination: `${landingUrl}/landing` },
-          { source: "/landing/:path*", destination: `${landingUrl}/landing/:path*` },
-        ]
-      : [];
+    return {
+      // Antes que las páginas dinámicas: si no, /landing lo tomaría la ruta [slug] de los lavaderos.
+      beforeFiles: [
+        // Landing del Detallado Lavafy (sitio estático en public/landing).
+        { source: "/landing", destination: "/landing/index.html" },
+        { source: "/landing/", destination: "/landing/index.html" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
   async headers() {
-    return [{ source: "/:path*", headers: [{ key: "X-Content-Type-Options", value: "nosniff" }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }] }];
+    return [
+      { source: "/:path*", headers: [{ key: "X-Content-Type-Options", value: "nosniff" }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }] },
+      { source: "/landing/assets/:path*", headers: [{ key: "Cache-Control", value: "public, max-age=604800" }] },
+    ];
   },
 };
 
