@@ -1,13 +1,20 @@
 import { z } from "zod";
-import { normalizePlate, PLATE_RE } from "./format";
+import { normalizePlate, PHONE_ERROR, PLATE_RE, toWhatsAppNumber } from "./format";
 
 export const vehicleTypeSchema = z.enum(["auto", "suv", "pickup", "moto"]);
 
+/** Celular válido para WhatsApp. Se guarda normalizado: "+5493511234567". */
 export const phoneSchema = z
   .string()
   .trim()
-  .transform((v) => v.replace(/[^\d+]/g, ""))
-  .refine((v) => v.replace(/\D/g, "").length >= 8 && v.replace(/\D/g, "").length <= 15, "Ingresá un teléfono válido");
+  .transform((v, ctx) => {
+    const number = toWhatsAppNumber(v);
+    if (!number) {
+      ctx.addIssue({ code: "custom", message: PHONE_ERROR });
+      return z.NEVER;
+    }
+    return `+${number}`;
+  });
 
 export const plateSchema = z
   .string()
@@ -43,7 +50,14 @@ export const manualBookingSchema = z.object({
   vehicleType: vehicleTypeSchema,
   startsAt: z.iso.datetime(),
   customerName: z.string().trim().min(1, "Ingresá un nombre").max(80),
-  customerPhone: z.string().trim().max(30).optional().nullable().transform((v) => v || null),
+  customerPhone: z
+    .string()
+    .trim()
+    .max(30)
+    .optional()
+    .nullable()
+    .transform((v) => v || null)
+    .pipe(z.union([z.null(), phoneSchema])),
   customerEmail: z.union([z.email(), z.literal("")]).optional().nullable().transform((v) => v || null),
   plate: z.string().optional().nullable().transform((v) => (v ? normalizePlate(v) : null)),
   brand: optionalText(40),

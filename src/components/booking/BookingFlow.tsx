@@ -7,7 +7,7 @@ import { ArrowLeft, Bike, Car, CarFront, Check, Clock, ShieldCheck, Truck } from
 import type { VehicleType } from "@/db/schema";
 import type { DateException, WeeklyHour } from "@/lib/availability";
 import { VEHICLE_TYPES } from "@/lib/constants";
-import { cn, formatDuration, formatMoney, normalizePlate, PLATE_RE } from "@/lib/format";
+import { cn, formatDuration, formatMoney, normalizePlate, PHONE_ERROR, PLATE_RE, toWhatsAppNumber } from "@/lib/format";
 import { dateStrParts, ucfirst } from "@/lib/time";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
@@ -124,8 +124,7 @@ export function BookingFlow({ business, services, weekly, exceptions, user, save
   const validateDetails = () => {
     const next: typeof errors = {};
     if (draft.name.trim().length < 2) next.name = "Ingresá tu nombre";
-    const digits = draft.phone.replace(/\D/g, "");
-    if (digits.length < 8 || digits.length > 15) next.phone = "Ingresá un teléfono válido";
+    if (!toWhatsAppNumber(draft.phone)) next.phone = PHONE_ERROR;
     if (!PLATE_RE.test(normalizePlate(draft.plate))) next.plate = "Patente inválida (ej: AB123CD o ABC123)";
     setErrors(next);
     return Object.keys(next).length === 0;

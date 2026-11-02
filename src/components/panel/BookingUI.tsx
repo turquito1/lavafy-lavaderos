@@ -21,7 +21,8 @@ import type { BookingStatus, VehicleType } from "@/db/schema";
 import type { BookingDTO } from "@/lib/booking-dto";
 import type { CatalogService } from "@/server/queries";
 import { SOURCE_LABEL, STATUS_CONFIG, STATUS_TRANSITIONS, VEHICLE_LABEL, VEHICLE_TYPES } from "@/lib/constants";
-import { cn, formatDuration, formatMoney, whatsappLink } from "@/lib/format";
+import { cn, formatDuration, formatMoney } from "@/lib/format";
+import { noticeForStatus, whatsappNoticeLink } from "@/lib/whatsapp-messages";
 import { formatDateLong, formatTime, hhmmToMinute, minuteToHHMM, todayStr, utcToZoned, zonedToUtc } from "@/lib/time";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
@@ -65,14 +66,29 @@ function transitionLabel(from: BookingStatus, to: BookingStatus) {
   return back ? `Volver a “${STATUS_CONFIG[to].label}”` : ACTION_LABEL[to];
 }
 
-function useStatusChange() {
+/** URL de la app, para los links que van en los mensajes (solo en el navegador). */
+function appOrigin() {
+  return typeof window === "undefined" ? undefined : window.location.origin;
+}
+
+function useStatusChange(business: PanelBusiness) {
   const [pending, start] = useTransition();
   const change = (booking: BookingDTO, status: BookingStatus, onDone?: () => void) =>
     start(async () => {
       const res = await setBookingStatusAction(booking.id, status);
       if (res.ok) {
-        if (status === "ready") toast.success(booking.customerEmail ? "Listo. Le avisamos al cliente por mail ✨" : "Marcado como listo");
-        else if (status === "confirmed" && booking.status === "pending") toast.success(booking.customerEmail ? "Turno aprobado. Le avisamos al cliente." : "Turno aprobado");
+        const approved = status === "confirmed" && booking.status === "pending";
+        if (status === "ready" || approved) {
+          const byMail = booking.customerEmail ? " Le avisamos por mail." : "";
+          const message = status === "ready" ? `Marcado como listo ✨${byMail}` : `Turno aprobado.${byMail}`;
+          const link = whatsappNoticeLink(status === "ready" ? "ready" : "confirmed", booking, business, appOrigin());
+          toast.success(
+            message,
+            link
+              ? { duration: 15_000, action: { label: "Avisar por WhatsApp", onClick: () => window.open(link, "_blank", "noopener") } }
+              : undefined,
+          );
+        }
         onDone?.();
       } else toast.error(res.error);
     });
@@ -82,7 +98,8 @@ function useStatusChange() {
 // ─── Fila de turno ────────────────────────────────────────────────────────────
 
 export function BookingRow({ booking, business, onOpen, showDate }: { booking: BookingDTO; business: PanelBusiness; onOpen: () => void; showDate?: boolean }) {
-  const { pending, change } = useStatusChange();
+  const { pending, change } = useStatusChange(business);
+  const readyLink = booking.status === "ready" ? whatsappNoticeLink("ready", booking, business) : null;
   const next = NEXT_ACTION[booking.status];
   const start = new Date(booking.startsAt);
   const end = new Date(booking.endsAt);
@@ -116,6 +133,18 @@ export function BookingRow({ booking, business, onOpen, showDate }: { booking: B
         </div>
       </button>
       <div className="flex shrink-0 items-center gap-1">
+        {readyLink && (
+          <a
+            href={readyLink}
+            target="_blank"
+            rel="noopener"
+            className="flex size-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+            aria-label="Avisar por WhatsApp que está listo"
+            title="Avisar por WhatsApp que está listo"
+          >
+            <MessageCircle className="size-4" />
+          </a>
+        )}
         {next && (
           <Button size="sm" variant={booking.status === "pending" ? "primary" : "soft"} loading={pending} icon={<next.icon className="size-4" />} onClick={() => change(booking, next.to)} className="px-2.5 sm:px-3.5">
             <span className="hidden sm:inline">{next.label}</span>
@@ -137,8 +166,12 @@ export function BookingSheet({ booking, business, onClose }: { booking: BookingD
   return <BookingSheetBody key={`${booking.id}:${booking.internalNotes ?? ""}`} booking={booking} business={business} onClose={onClose} />;
 }
 
+const NOTICE_LABEL = { ready: "Avisar que está listo", confirmed: "Confirmar por WhatsApp", general: "WhatsApp" } as const;
+
 function BookingSheetBody({ booking, business, onClose }: { booking: BookingDTO; business: PanelBusiness; onClose: () => void }) {
-  const { pending, change } = useStatusChange();
+  const { pending, change } = useStatusChange(business);
+  const notice = noticeForStatus(booking.status);
+  const noticeLink = whatsappNoticeLink(notice, booking, business, appOrigin());
   const [mode, setMode] = useState<"view" | "cancel" | "move">("view");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState(booking.internalNotes ?? "");
@@ -217,14 +250,16 @@ function BookingSheetBody({ booking, business, onClose }: { booking: BookingDTO;
             <div className="flex flex-wrap gap-2">
               {booking.customerPhone && (
                 <>
-                  <a
-                    href={whatsappLink(booking.customerPhone, `Hola ${booking.customerName.split(" ")[0]}! Te escribimos de ${business.name} por tu turno del ${formatDateLong(start, tz)} a las ${formatTime(start, tz)}.`)}
-                    target="_blank"
-                    rel="noopener"
-                    className="flex h-10 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <MessageCircle className="size-4" /> WhatsApp
-                  </a>
+                  {noticeLink && (
+                    <a
+                      href={noticeLink}
+                      target="_blank"
+                      rel="noopener"
+                      className="flex h-10 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
+                    >
+                      <MessageCircle className="size-4" /> {NOTICE_LABEL[notice]}
+                    </a>
+                  )}
                   <a href={`tel:${booking.customerPhone}`} className="flex h-10 items-center gap-1.5 rounded-xl bg-slate-100 px-3 text-sm font-semibold text-ink-soft hover:bg-slate-200">
                     <Phone className="size-4" /> {booking.customerPhone}
                   </a>
