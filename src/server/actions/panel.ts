@@ -33,8 +33,10 @@ import {
 import { MAX_PHOTOS, RESERVED_SLUGS } from "@/lib/constants";
 import { isDateStr } from "@/lib/time";
 import { slugify } from "@/lib/format";
-import { firstError, manualBookingSchema, vehicleTypeSchema, type ManualBookingPayload } from "@/lib/validation";
+import { firstError, manualBookingSchema, phoneSchema, vehicleTypeSchema, type ManualBookingPayload } from "@/lib/validation";
 import { fail, handleError, ok, type ActionResult } from "./result";
+import { resetDemoBusiness } from "@/server/demo";
+import { DEMO_SLUG } from "@/lib/demo-data";
 import { deleteImage, saveImage, StorageError } from "@/server/storage";
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
@@ -46,7 +48,7 @@ const slugSchema = z
   .min(3, "El link tiene que tener al menos 3 caracteres")
   .max(40)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Solo letras, números y guiones")
-  .refine((s) => !RESERVED_SLUGS.has(s), "Ese link está reservado, probá otro");
+  .refine((s) => !RESERVED_SLUGS.has(s) && s !== DEMO_SLUG, "Ese link está reservado, probá otro");
 
 const optional = (max = 200) =>
   z
@@ -114,7 +116,7 @@ export async function suggestSlugAction(name: string): Promise<string> {
   const base = slugify(name) || "lavadero";
   for (let i = 0; i < 20; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
-    if (RESERVED_SLUGS.has(candidate) || candidate.length < 3) continue;
+    if (RESERVED_SLUGS.has(candidate) || candidate === DEMO_SLUG || candidate.length < 3) continue;
     const [exists] = await db.select({ id: businesses.id }).from(businesses).where(eq(businesses.slug, candidate));
     if (!exists) return candidate;
   }
@@ -511,4 +513,24 @@ export async function adminSetBusinessStatusAction(businessId: string, status: "
   await db.update(businesses).set({ status }).where(inArray(businesses.id, [businessId]));
   refresh();
   return ok(undefined);
+}
+
+/** Crea o regenera el lavadero demo (lavafy.com.ar/demo) y lo deja elegido en el panel. */
+export async function adminResetDemoAction(phone: string): Promise<ActionResult<{ bookings: number; today: number }>> {
+  const user = await requireUser("/admin");
+  if (!user.isSuperAdmin) return fail("Sin permiso");
+  let customerPhone: string | null = null;
+  if (phone.trim()) {
+    const parsed = phoneSchema.safeParse(phone);
+    if (!parsed.success) return fail(firstError(parsed.error));
+    customerPhone = parsed.data;
+  }
+  try {
+    const res = await resetDemoBusiness({ ownerId: user.id, customerPhone });
+    (await cookies()).set(BUSINESS_COOKIE, res.businessId, { path: "/", httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 365 });
+    refresh();
+    return ok({ bookings: res.bookings, today: res.today });
+  } catch (err) {
+    return handleError(err);
+  }
 }

@@ -131,6 +131,7 @@ export async function searchDirectory(params: { q?: string; lat?: number; lng?: 
     .where(
       and(
         eq(businesses.status, "active"),
+        eq(businesses.isDemo, false),
         term
           ? sql`(unaccent_lower(${businesses.name}) like '%' || unaccent_lower(${term}) || '%' or unaccent_lower(coalesce(${businesses.city}, '')) like '%' || unaccent_lower(${term}) || '%' or unaccent_lower(coalesce(${businesses.address}, '')) like '%' || unaccent_lower(${term}) || '%')`
           : undefined,

@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { bookings, businesses } from "@/db/schema";
+import { bookings, businesses, users } from "@/db/schema";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { PageSkeleton } from "@/components/ui/Spinner";
 import { AdminStatusSelect } from "@/components/panel/AdminStatusSelect";
+import { AdminDemoCard } from "@/components/panel/AdminDemoCard";
+import { DEMO_SLUG } from "@/server/demo";
 import { requireUser } from "@/server/session";
 
 export const metadata: Metadata = { title: "Administración", robots: { index: false } };
@@ -42,11 +44,22 @@ async function Content() {
     })
     .from(businesses)
     .orderBy(desc(businesses.createdAt));
-  const [{ totalBookings }] = await db.select({ totalBookings: sql<number>`count(*)::int` }).from(bookings).where(eq(bookings.source, "online"));
+  const [{ totalBookings }] = await db
+    .select({ totalBookings: sql<number>`count(*)::int` })
+    .from(bookings)
+    .innerJoin(businesses, eq(businesses.id, bookings.businessId))
+    .where(and(eq(bookings.source, "online"), eq(businesses.isDemo, false)));
+  const [demo] = await db
+    .select({ updatedAt: businesses.updatedAt, bookings: sql<number>`(select count(*)::int from bookings bk where bk.business_id = "businesses"."id")` })
+    .from(businesses)
+    .where(eq(businesses.slug, DEMO_SLUG));
+  const [me] = await db.select({ phone: users.phone }).from(users).where(eq(users.id, user.id));
+  const realCount = rows.filter((r) => r.slug !== DEMO_SLUG).length;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <PageHeader title="Administración" description={`${rows.length} lavaderos · ${totalBookings} turnos online en total`} />
+      <PageHeader title="Administración" description={`${realCount} lavaderos · ${totalBookings} turnos online en total (sin contar la demo)`} />
+      <AdminDemoCard demo={demo ?? null} defaultPhone={me?.phone ?? ""} />
       <Card className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="border-b border-line text-left text-xs text-muted uppercase">

@@ -150,6 +150,8 @@ export const businesses = pgTable(
     requiresApproval: boolean("requires_approval").notNull().default(false),
 
     status: businessStatusEnum("status").notNull().default("draft"),
+    /** Lavadero de muestra (lavafy.com.ar/demo): no aparece en el directorio público. */
+    isDemo: boolean("is_demo").notNull().default(false),
 
     // Suscripción (MVP: solo trial; los planes pagos vienen después)
     plan: text("plan").notNull().default("trial"),
